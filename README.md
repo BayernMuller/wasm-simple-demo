@@ -29,7 +29,8 @@ https://wasm-simple-demo.vercel.app
    ```bash
    emcc image_inversion.cpp -o image_inversion.js \
      -s EXPORTED_FUNCTIONS='["_image_inversion", "_malloc", "_free"]' \
-     -s EXPORTED_RUNTIME_METHODS='["ccall", "HEAPU8"]'
+     -s EXPORTED_RUNTIME_METHODS='["ccall", "HEAPU8"]' \
+     -s ALLOW_MEMORY_GROWTH=1
    ```
 
 2. **웹 서버 실행하기**
