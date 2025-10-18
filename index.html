@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8" />
+    <title>WASM Image Inversion</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <h1>WASM 이미지 반전</h1>
+    
+    <div id="controls">
+        <input type="file" id="imageInput" accept="image/*" />
+        <button id="invertBtn" disabled>이미지 반전</button>
+    </div>
+
+    <div class="container">
+        <div class="canvas-wrapper">
+            <h3>원본 이미지</h3>
+            <canvas id="originalCanvas"></canvas>
+        </div>
+        <div class="canvas-wrapper">
+            <h3>반전된 이미지</h3>
+            <canvas id="invertedCanvas"></canvas>
+        </div>
+    </div>
+
+    <script src="image_inversion.js"></script>
+    <script>
+        const originalCanvas = document.getElementById('originalCanvas');
+        const invertedCanvas = document.getElementById('invertedCanvas');
+        const originalCtx = originalCanvas.getContext('2d');
+        const invertedCtx = invertedCanvas.getContext('2d');
+        const imageInput = document.getElementById('imageInput');
+        const invertBtn = document.getElementById('invertBtn');
+        let imageData = null;
+
+        imageInput.addEventListener('change', function (e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function (event) {
+                    const img = new Image();
+                    img.onload = function () {
+                        originalCanvas.width = invertedCanvas.width = img.width;
+                        originalCanvas.height = invertedCanvas.height = img.height;
+                        originalCtx.drawImage(img, 0, 0);
+                        imageData = originalCtx.getImageData(0, 0, img.width, img.height);
+                        invertBtn.disabled = false;
+                    };
+                    img.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        Module.onRuntimeInitialized = function () {
+            invertBtn.addEventListener('click', function () {
+                if (!imageData) return;
+                const data = new Uint8ClampedArray(imageData.data);
+                const ptr = Module._malloc(data.length);
+                Module.HEAPU8.set(data, ptr);
+                Module.ccall('image_inversion', null, ['number', 'number', 'number'], [ptr, imageData.width, imageData.height]);
+                const resultData = Module.HEAPU8.subarray(ptr, ptr + data.length);
+                const newImageData = new ImageData(new Uint8ClampedArray(resultData), imageData.width, imageData.height);
+                invertedCtx.putImageData(newImageData, 0, 0);
+                Module._free(ptr);
+            });
+        };
+    </script>
+</body>
+
+</html>
